@@ -10,5 +10,8 @@
 
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("devicereestrdb.mdf")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("devicereestrdb_log.ldf")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("e_sqlite3.dll")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("e_sqlite3.dll")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("e_sqlite3.dll")]
 
 

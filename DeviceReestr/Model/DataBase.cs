@@ -5,26 +5,33 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
+using Microsoft.Data.Sqlite;
 
 namespace DeviceReestr.Model
 {
     static class DataBase
     {
         private static string CONNECTION_STRING;
+        private static string CONNECTION_STRING_SQLITE;
+        private static string selectedConnection;
 
         static DataBase()
         {
             CONNECTION_STRING = ConfigurationManager.ConnectionStrings["DeviceReestrDBConnectionString"].ConnectionString;
+            CONNECTION_STRING_SQLITE = ConfigurationManager.ConnectionStrings["DeviceReestrSqliteConnectionString"].ConnectionString;
+
+            selectedConnection = CONNECTION_STRING_SQLITE;
         }
 
         internal static int TryAuthorize(User user, string password)
         {
-            using (SqlConnection sqlConn = new SqlConnection(CONNECTION_STRING))
+            using (SqliteConnection sqlConn = new SqliteConnection(selectedConnection))
             {
                 try
                 {
                     sqlConn.Open();
-                    SqlCommand command = new SqlCommand($"SELECT TOP 1 Id FROM [Users] WHERE Login = '{user.Login}' AND Password = '{password}'", sqlConn);
+                    var command = sqlConn.CreateCommand();
+                    command.CommandText = $"SELECT Id FROM [Users] WHERE Login = '{user.Login}' AND Password = '{password}'";
                     var reader = command.ExecuteReader();
                     if (reader.HasRows)
                     {
@@ -47,26 +54,19 @@ namespace DeviceReestr.Model
 
         internal static bool TrySave(Device device)
         {
-            SqlConnection connection = new SqlConnection(CONNECTION_STRING);
+            SqliteConnection sqlConn = new SqliteConnection(selectedConnection);
             try
             {
-                connection.Open();
+                sqlConn.Open();
 
-                SqlCommand command = new SqlCommand("sp_InsertDevice", connection);
-                command.CommandType = System.Data.CommandType.StoredProcedure;
-
-                SqlParameter idParam = new SqlParameter() { ParameterName = "@id", Value = device.Id };
-                command.Parameters.Add(idParam);
-                SqlParameter serialParam = new SqlParameter() { ParameterName = "@serialNo", Value = device.SerialNo };
-                command.Parameters.Add(serialParam);
-                SqlParameter typeParam = new SqlParameter() { ParameterName = "@type", Value = device.Type };
-                command.Parameters.Add(typeParam);
-                SqlParameter descParam = new SqlParameter() { ParameterName = "@description", Value = device.Description };
-                command.Parameters.Add(descParam);
-                SqlParameter ownerParam = new SqlParameter() { ParameterName = "@owner", Value = device.Owner.Id };
-                command.Parameters.Add(ownerParam);
-                SqlParameter dateParam = new SqlParameter() { ParameterName = "@createAt", Value = device.CreatedAt };
-                command.Parameters.Add(dateParam);
+                var command = sqlConn.CreateCommand();
+                command.CommandText = @"INSERT INTO [Devices] VALUES ($id, $serialNo, $type, $description, $owner, $createAt)";
+                command.Parameters.AddWithValue("$id", device.Id);
+                command.Parameters.AddWithValue("$serialNo", device.SerialNo);
+                command.Parameters.AddWithValue("$type", device.Type);
+                command.Parameters.AddWithValue("$description", device.Description);
+                command.Parameters.AddWithValue("$owner", device.Owner.Id);
+                command.Parameters.AddWithValue("$createAt", device.CreatedAt);
 
                 command.ExecuteNonQuery();
                 return true;
@@ -77,19 +77,20 @@ namespace DeviceReestr.Model
             }
             finally
             {
-                connection.Close();
+                sqlConn.Close();
             }
         }
 
         internal static List<Device> TryGetDevicesByUser(User user)
         {
             List<Device> list = new List<Device>();
-            using (SqlConnection sqlConn = new SqlConnection(CONNECTION_STRING))
+            using (SqliteConnection sqlConn = new SqliteConnection(selectedConnection))
             {
                 try
                 {
                     sqlConn.Open();
-                    SqlCommand command = new SqlCommand($"SELECT * FROM [Devices] WHERE Owner = {user.Id}", sqlConn);
+                    var command = sqlConn.CreateCommand();
+                    command.CommandText = $"SELECT * FROM [Devices] WHERE Owner = {user.Id}";
                     var reader = command.ExecuteReader();
                     if (reader.HasRows)
                     {
@@ -117,12 +118,13 @@ namespace DeviceReestr.Model
         internal static List<Device> TryGetDevicesAll()
         {
             List<Device> list = new List<Device>();
-            using (SqlConnection sqlConn = new SqlConnection(CONNECTION_STRING))
+            using (SqliteConnection sqlConn = new SqliteConnection(selectedConnection))
             {
                 try
                 {
                     sqlConn.Open();
-                    SqlCommand command = new SqlCommand($"SELECT * FROM [Devices]", sqlConn);
+                    var command = sqlConn.CreateCommand();
+                    command.CommandText = $"SELECT * FROM [Devices]";
                     var reader = command.ExecuteReader();
                     if (reader.HasRows)
                     {
